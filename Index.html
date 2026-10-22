@@ -97,6 +97,54 @@ tr.tot td{font-weight:800;color:var(--ink);background:#F2F8F3;border-top:2px sol
 </style>
 </head>
 <body>
+  <button id="refreshBtn" onclick="loadSheetData()">
+  Refresh Data
+</button>
+
+<p id="status">Ready</p>
+<div id="sheetData"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<script>
+const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQd2rbC8OWyCJ9o5kyZUtUUsxqVif9U61J6m1Y5Cy5RLNp6SshuWIKvBykoMPWe1xYDfq4gVHYZZeJL/pub?gid=1037853958&single=true&output=csv";
+
+function loadSheetData() {
+  document.getElementById("status").textContent = "Loading...";
+
+  Papa.parse(sheetURL, {
+    download: true,
+    skipEmptyLines: true,
+    complete: function(result) {
+      const rows = result.data;
+      const table = document.createElement("table");
+      table.border = "1";
+
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+
+        row.forEach(value => {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          tr.appendChild(cell);
+        });
+
+        table.appendChild(tr);
+      });
+
+      const container = document.getElementById("sheetData");
+      container.replaceChildren(table);
+
+      document.getElementById("status").textContent =
+        "Updated: " + new Date().toLocaleString();
+    },
+    error: function() {
+      document.getElementById("status").textContent =
+        "Failed to load data. Please try again.";
+    }
+  });
+}
+</script>
 <div class="app">
   <div class="topbar">
     <div class="brand">
