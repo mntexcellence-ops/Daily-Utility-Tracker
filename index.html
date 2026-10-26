@@ -80,6 +80,24 @@ tr.tot td{font-weight:800;color:var(--text);background:#EFFAF3;border-top:2px so
 @media(max-width:1100px){.layout{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}.s3,.s4,.s6{grid-column:span 12}}
 @media(max-width:680px){body{padding:8px}.kpis{grid-template-columns:repeat(2,1fr);gap:9px}.nav{grid-template-columns:repeat(2,1fr);gap:9px}.topbar{flex-wrap:wrap;gap:10px;padding:12px 14px}.brand h1{font-size:16px}.logoimg{height:42px}.side{position:static}.card{padding:13px 12px}.kpi{padding:11px 12px 6px}}
 @media(max-width:380px){.kpi .v{font-size:13px}.nav div{font-size:10.5px;padding:11px 3px}}
+.entrybar{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px 18px;box-shadow:0 2px 10px var(--shadow);margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.entrybar span{font-size:11.5px;color:var(--muted)}
+.entrybtn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:700;cursor:pointer}
+.entrybtn:disabled{opacity:.55;cursor:wait}
+.entrybtn.off{background:var(--soft);color:var(--text);border:1px solid var(--border)}
+.entrypanel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:0 2px 10px var(--shadow);margin-bottom:14px}
+.entrypanel h3{font-size:13.5px;margin-bottom:3px}
+.entrypanel .s{font-size:11px;color:var(--faint);margin:2px 0 12px}
+.efgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.efgrid label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
+.efinput{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--soft);font-family:inherit}
+.efinput[readonly]{background:var(--soft2);font-weight:700}
+.efseg{display:flex;background:var(--soft2);border-radius:9px;padding:3px;margin-bottom:12px}
+.efseg button{flex:1;border:0;background:transparent;padding:8px 2px;font-size:12.5px;font-weight:700;color:var(--muted);border-radius:7px;cursor:pointer}
+.efseg button.on{background:var(--brand);color:#fff}
+.efmsg{font-size:12.5px;margin-top:10px;min-height:18px}
+.efmsg.ok{color:#15803D}.efmsg.err{color:#DC2626}
+@media(max-width:680px){.efgrid{grid-template-columns:repeat(2,1fr)}}
 </style></head><body>
 <div class="app">
   <div class="topbar">
@@ -92,6 +110,43 @@ tr.tot td{font-weight:800;color:var(--text);background:#EFFAF3;border-top:2px so
     <button id="btnRefresh" onclick="refreshLive(true)" style="background:var(--brand);color:#fff;border:0;border-radius:8px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer">⟳ Refresh Data</button>
     </div>
     <div id="liveStatus" style="margin-top:5px;font-size:11px"></div></div>
+  </div>
+  <div class="entrybar">
+    <button id="btnEntry" class="entrybtn" onclick="toggleEntry()">➕ ডেটা এন্ট্রি</button>
+    <span>নতুন দিনের ডেটা যোগ করো বা পুরনো এন্ট্রি বদলাও — সরাসরি এই পেজ থেকে, Sheet-এ যাওয়া ছাড়াই। প্রথমবার একবার Apps Script সেটআপ লাগবে (প্যানেলের নিচে দেখো)।</span>
+  </div>
+  <div class="entrypanel" id="entryPanel" style="display:none">
+    <h3>✏️ ডেটা এন্ট্রি</h3>
+    <div class="s">নতুন এন্ট্রি যোগ করো, বা পুরনো এন্ট্রি বদলাও। Delete করতে চাইলে Sheet থেকে করতে হবে।</div>
+    <div class="efseg">
+      <button id="efModeAdd" class="on" onclick="setEntryMode('add')">➕ নতুন এন্ট্রি</button>
+      <button id="efModeEdit" onclick="setEntryMode('edit')">✏️ পুরনো এন্ট্রি বদলাও</button>
+    </div>
+    <div class="efgrid">
+      <div><label>তারিখ (Date) *</label><input type="date" id="efDate" class="efinput" onchange="efOnKeyChange()"></div>
+      <div><label>ইউনিট (Unit) *</label><select id="efUnit" class="efinput" onchange="efOnKeyChange()"></select></div>
+      <div id="efItemAddBox"><label>আইটেম (Item) *</label><input id="efItem" class="efinput" list="efItemList" onchange="efItemPicked()" placeholder="যেমন: Electricity (REB)"><datalist id="efItemList"></datalist></div>
+      <div id="efItemEditBox" style="display:none"><label>আইটেম (Item) *</label><select id="efItemSel" class="efinput" onchange="efEditItemPicked()"></select></div>
+      <div><label>ক্যাটাগরি (Category)</label><input id="efCat" class="efinput"></div>
+      <div><label>UOM</label><input id="efUom" class="efinput"></div>
+      <div><label>Running Hours</label><input type="number" step="any" id="efHrs" class="efinput"></div>
+      <div><label>Consumption</label><input type="number" step="any" id="efCons" class="efinput" oninput="efCalcCost()"></div>
+      <div><label>Unit Rate (BDT)</label><input type="number" step="any" id="efRate" class="efinput" oninput="efCalcCost()"></div>
+      <div><label>Cost (BDT, auto)</label><input id="efCost" class="efinput" readonly></div>
+      <div><label>Password (ENTRY_TOKEN)</label><input type="password" id="efToken" class="efinput" placeholder="Apps Script-এ সেট করা password"></div>
+      <div style="display:flex;align-items:center"><label style="margin:0;font-size:12px;color:var(--body)"><input type="checkbox" id="efRemember"> এই ডিভাইসে password মনে রাখো</label></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="entrybtn" id="efSubmit" onclick="efSubmit()">💾 সেভ করো</button>
+      <button class="entrybtn off" onclick="toggleEntrySettings()">⚙️ সেটিংস (Apps Script URL)</button>
+    </div>
+    <div id="efSettings" style="display:none;margin-top:12px">
+      <label style="font-size:11px;color:var(--muted)">Apps Script Web app URL (Deploy করার পর পাওয়া URL এখানে বসাও, একবারই লাগবে)</label>
+      <input id="efUrl" class="efinput" placeholder="https://script.google.com/macros/s/.../exec">
+      <button class="entrybtn" style="margin-top:8px" onclick="efSaveUrl()">URL সেভ করো</button>
+    </div>
+    <div id="efMsg" class="efmsg"></div>
+    <div class="s" style="margin-top:8px">সেটআপ: script.google.com → New project → Code.gs-এর কোড বসাও → Project Settings → Script properties-তে ENTRY_TOKEN = তোমার password → Deploy → Web app (Execute as: Me, Who has access: Anyone) → URL কপি করে উপরের সেটিংসে বসাও।</div>
   </div>
   <div class="layout">
     <aside class="side">
@@ -540,6 +595,92 @@ async function refreshLive(manual){
     if(manual) alert('Sheet থেকে live data আনা গেল না — আগের data-ই দেখাচ্ছে। Internet connection check করো।');
   }
   if(btn) btn.disabled=false;
+}
+/* ── Data Entry (Apps Script bridge) ── */
+let efMode='add';
+const EF_MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function efGet(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+function efSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function efUnitName(u){ const s=D.summ.find(x=>x.unit===u); if(s) return s.uname;
+  const r=D.rows.find(x=>x.unit===u); return r?r.uname:u; }
+function efItemMap(){ const m={}; D.rows.forEach(r=>{ if(r.item && !m[r.item]) m[r.item]={cat:r.cat,uom:r.uom}; }); return m; }
+function efBuildLists(){
+  const us=document.getElementById('efUnit'); if(!us) return;
+  const cur=us.value;
+  us.innerHTML=D.units.map(u=>`<option value="${u}">${u} · ${esc(efUnitName(u))}</option>`).join('');
+  if(cur) us.value=cur;
+  const dl=document.getElementById('efItemList'); if(dl) dl.innerHTML=Object.keys(efItemMap()).map(i=>`<option value="${esc(i)}">`).join('');
+  const tok=document.getElementById('efToken'); if(tok && !tok.value) tok.value=efGet('ud-entry-token');
+  const url=document.getElementById('efUrl'); if(url && !url.value) url.value=efGet('ud-entry-url');
+  const dd=document.getElementById('efDate');
+  if(dd && !dd.value){ const t=new Date(); dd.value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); }
+}
+function toggleEntry(){ const p=document.getElementById('entryPanel'); if(!p) return;
+  const open=p.style.display==='none'; if(open) efBuildLists();
+  p.style.display=open?'block':'none';
+  const b=document.getElementById('btnEntry'); if(b) b.textContent=open?'✖️ ডেটা এন্ট্রি বন্ধ করো':'➕ ডেটা এন্ট্রি'; }
+function toggleEntrySettings(){ const s=document.getElementById('efSettings'); if(s) s.style.display=s.style.display==='none'?'block':'none'; }
+function efSaveUrl(){ const u=(document.getElementById('efUrl')||{}).value.trim();
+  if(!u){ efSay('আগে Apps Script Web app URL বসাও।','err'); return; }
+  efSet('ud-entry-url',u); efSay('✅ URL সেভ হয়েছে। এখন password দিয়ে এন্ট্রি দিতে পারবে।','ok'); }
+function setEntryMode(m){ efMode=m;
+  document.getElementById('efModeAdd').classList.toggle('on', m==='add');
+  document.getElementById('efModeEdit').classList.toggle('on', m==='edit');
+  document.getElementById('efItemAddBox').style.display=m==='add'?'block':'none';
+  document.getElementById('efItemEditBox').style.display=m==='edit'?'block':'none';
+  efSay('',''); efOnKeyChange(); }
+function efSay(msg, cls){ const e=document.getElementById('efMsg'); if(e){ e.textContent=msg; e.className='efmsg '+(cls||''); } }
+function efToSheetDate(iso){ if(!iso) return ''; const p=iso.split('-'); if(p.length!==3) return '';
+  return parseInt(p[2],10)+'-'+EF_MON[parseInt(p[1],10)-1]+'-'+p[0].slice(2); }
+function efCalcCost(){ const c=parseFloat(document.getElementById('efCons').value);
+  const r=parseFloat(document.getElementById('efRate').value);
+  document.getElementById('efCost').value=(isFinite(c)&&isFinite(r))?(Math.round(c*r*100)/100).toLocaleString('en-US'):''; }
+function efItemPicked(){ const it=document.getElementById('efItem').value.trim();
+  const m=efItemMap()[it];
+  if(m){ document.getElementById('efCat').value=m.cat; document.getElementById('efUom').value=m.uom; } }
+function efOnKeyChange(){
+  if(efMode!=='edit') return;
+  const u=document.getElementById('efUnit').value, d=document.getElementById('efDate').value;
+  const sel=document.getElementById('efItemSel');
+  const items=[...new Set(D.rows.filter(r=>r.unit===u && r.date===d).map(r=>r.item))];
+  sel.innerHTML=items.length?items.map(i=>`<option value="${esc(i)}">${esc(i)}</option>`).join(''):'<option value="">— এই দিনে কোনো এন্ট্রি নেই —</option>';
+  if(items.length) efEditItemPicked();
+  else ['efCat','efUom','efHrs','efCons','efRate','efCost'].forEach(id=>document.getElementById(id).value='');
+}
+function efEditItemPicked(){
+  const u=document.getElementById('efUnit').value, d=document.getElementById('efDate').value, it=document.getElementById('efItemSel').value;
+  const r=D.rows.find(x=>x.unit===u && x.date===d && x.item===it);
+  if(!r) return;
+  document.getElementById('efCat').value=r.cat; document.getElementById('efUom').value=r.uom;
+  document.getElementById('efHrs').value=r.hrs||''; document.getElementById('efCons').value=r.cons||'';
+  document.getElementById('efRate').value=r.rate||''; efCalcCost();
+}
+async function efSubmit(){
+  const url=efGet('ud-entry-url');
+  const btn=document.getElementById('efSubmit');
+  if(!url){ efSay('❌ আগে ⚙️ সেটিংসে Apps Script Web app URL বসিয়ে সেভ করো।','err'); toggleEntrySettings(); return; }
+  const date=document.getElementById('efDate').value, unit=document.getElementById('efUnit').value;
+  const item=efMode==='edit'?document.getElementById('efItemSel').value:document.getElementById('efItem').value.trim();
+  const token=document.getElementById('efToken').value;
+  if(!date||!unit||!item){ efSay('❌ তারিখ, ইউনিট আর আইটেম — তিনটাই লাগবে।','err'); return; }
+  if(!token){ efSay('❌ Password দাও (Apps Script-এ সেট করা ENTRY_TOKEN)।','err'); return; }
+  if(document.getElementById('efRemember').checked) efSet('ud-entry-token',token);
+  const q=new URLSearchParams({token, action:efMode, date:efToSheetDate(date), unit,
+    uname:efUnitName(unit), item, cat:document.getElementById('efCat').value.trim(),
+    uom:document.getElementById('efUom').value.trim(), hrs:document.getElementById('efHrs').value,
+    cons:document.getElementById('efCons').value, rate:document.getElementById('efRate').value});
+  btn.disabled=true; efSay('⏳ সেভ করছি...');
+  try{
+    const res=await fetch(url+'?'+q.toString()+'&cb='+Date.now());
+    const j=await res.json();
+    if(!j.ok) throw new Error(j.error||'unknown error');
+    efSay('✅ সেভ হয়েছে! Dashboard refresh হচ্ছে...','ok');
+    await refreshLive(false);
+    efBuildLists();
+    if(efMode==='add'){ document.getElementById('efItem').value='';
+      ['efCat','efUom','efHrs','efCons','efRate','efCost'].forEach(id=>document.getElementById(id).value=''); }
+  }catch(e){ efSay('❌ সেভ হয়নি: '+e.message,'err'); }
+  btn.disabled=false;
 }
 buildFilters(); applyTheme(); render(); refreshLive(false);
 </script>
